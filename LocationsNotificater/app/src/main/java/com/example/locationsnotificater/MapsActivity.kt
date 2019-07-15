@@ -1,11 +1,11 @@
 package com.example.locationsnotificater
 
-import android.app.Notification
-import android.app.NotificationManager
-import android.app.PendingIntent
+import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -24,6 +24,14 @@ import com.google.android.gms.maps.model.MarkerOptions
 import java.lang.Exception
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
+
+    // for the notification
+    lateinit var notificationManager: NotificationManager
+    lateinit var notificationChannel: NotificationChannel
+    lateinit var buildder: Notification.Builder
+    private val channelId = "com.example.notification"
+    private val description = "test notification"
+    ////
 
     private lateinit var mMap: GoogleMap
 
@@ -84,6 +92,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
 
+
     }
     var mylocation:Location?=null
    inner class myLocationListener:LocationListener{
@@ -127,25 +136,15 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
 
+
        override fun run() {
            while (true){
                try {
-                   if (oldLocation!!.distanceTo(location1) == 100f){
-                       val intent = Intent()
-                       val pendingIntent = PendingIntent.getActivity(this@MapsActivity,0,intent,0)
-                       val notification = Notification.Builder(this@MapsActivity)
-                           .setSmallIcon(R.drawable.notification_icon_background)
-                           .setContentTitle("Target is near")
-                           .setContentText("You Are Near City Mall")
-                       notification.setContentIntent(pendingIntent)
 
-                       val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                       notificationManager.notify(0,notification.build())
-
-                   }
                    if (oldLocation!!.distanceTo(mylocation) == 0f){
                        continue
                    }
+
                    oldLocation = mylocation
 
                    runOnUiThread {
@@ -154,6 +153,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                    val sydney = LatLng(mylocation!!.latitude, mylocation!!.longitude)
                    mMap.addMarker(MarkerOptions().position(sydney).title("ME"))
                    mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+                       val distance = mylocation!!.distanceTo(oldLocation).toString()
+                       Toast.makeText(this@MapsActivity,"distance is $distance",Toast.LENGTH_LONG).show()
+                       if(location1!!.distanceTo(mylocation)<=10000f ){
+                           notifyMe()
+
+                       }
+
 
 
                        // show the targets on the map
@@ -162,13 +168,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                             if (Target.isNear==false) {
                                 val target = LatLng(Target.location!!.longitude, Target.location!!.latitude)
                                 mMap.addMarker(MarkerOptions().position(target).title(Target.name))
-                                mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,12f))
 
 
                             }
 
                        }
                }
+
 
                    Thread.sleep(1000)
                }catch (ex:Exception){}
@@ -183,30 +190,43 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         listOfTargets.add(target("Leti",59.971891,30.324073,false))
         listOfTargets.add(target("city Mall",60.005188,30.300059,false))
     }
-}
+
+
+    fun notifyMe(){
+
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(this@MapsActivity, LauncherActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(this@MapsActivity,0,intent,PendingIntent.FLAG_UPDATE_CURRENT)
 
 
 
-/*
- /// notify me if the distance is less than 10000f
-                                var tarLoc :Location?=null
-                                tarLoc = Location(tarLoc)
-                                tarLoc!!.latitude = target.latitude
-                                tarLoc!!.longitude = target.longitude
-                                if (mylocation!!.distanceTo(tarLoc) <= 5000f){
-                                    val intent = Intent()
-                                    val pendingIntent = PendingIntent.getActivity(this@MapsActivity,0,intent,0)
-                                    val notification = Notification.Builder(this@MapsActivity)
-                                        .setSmallIcon(R.drawable.notification_icon_background)
-                                        .setContentTitle("Target is near")
-                                        .setContentText("You Are Near ${Target.name}")
-                                    notification.setContentIntent(pendingIntent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationChannel = NotificationChannel(channelId,description,NotificationManager.IMPORTANCE_HIGH)
+            notificationChannel.enableLights(true)
+            notificationChannel.enableVibration(true)
+            notificationChannel.lightColor = Color.GREEN
+            notificationManager.createNotificationChannel(notificationChannel)
 
-                                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                                    notificationManager.notify(0,notification.build())
+            buildder = Notification.Builder(this,channelId)
+                .setContentTitle("dvv")
+                .setContentText("jicib")
+                .setSmallIcon(R.drawable.ic_launcher_round)
+                .setLargeIcon(BitmapFactory.decodeResource(this.resources,R.drawable.ic_launcher))
+                .setContentIntent(pendingIntent)
 
 
-                                }
+        }else{
+            buildder = Notification.Builder(this)
+                .setContentTitle("Distinatios")
+                .setContentText("YOU ARE near ")
+                .setSmallIcon(R.drawable.ic_launcher_round)
+                .setLargeIcon(BitmapFactory.decodeResource(this.resources,R.drawable.ic_launcher))
+                .setContentIntent(pendingIntent)
+        }
+        notificationManager.notify(1234,buildder.build())
+    }
+    }
 
 
- */
+
